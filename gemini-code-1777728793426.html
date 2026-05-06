@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人物画像プロンプトメーカー</title>
+<style>
+    /* 全体のデザイン設定 */
+    :root {
+        --primary-color: #4A90E2;
+        --bg-color: #F4F7F9;
+        --card-bg: #FFFFFF;
+        --text-color: #333333;
+        --border-color: #E1E8ED;
+    }
+
+    body { 
+        font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; 
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        padding: 20px; 
+        margin: 0;
+        display: flex;
+        justify-content: center;
+    }
+
+    .container {
+        background: var(--card-bg);
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+        max-width: 800px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    h2 { 
+        text-align: center;
+        color: var(--primary-color);
+        margin-top: 0;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--bg-color);
+    }
+
+    /* 入力欄のレイアウト */
+    .form-group { 
+        display: flex; 
+        align-items: flex-start;
+        margin-bottom: 15px; 
+        padding-bottom: 15px;
+        border-bottom: 1px dashed var(--border-color);
+        min-height: 42px;
+    }
+    
+    .form-group:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    label.section-label { 
+        flex: 0 0 200px; 
+        font-weight: 600; 
+        font-size: 15px;
+        color: #555;
+        padding-top: 10px;
+    }
+
+    .input-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .input-wrapper.row-layout {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+    }
+
+    /* 各種入力フォームのデザイン統一 */
+    input[type="text"], input[type="number"], select, .form-group textarea { 
+        width: 100%; 
+        padding: 12px; 
+        box-sizing: border-box; 
+        border: 1px solid #CCD6DD; 
+        border-radius: 6px; 
+        font-size: 15px;
+        background-color: #fff;
+        font-family: inherit;
+        transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    input:focus, select:focus, .form-group textarea:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    /* 自由入力欄 */
+    .custom-input {
+        margin-top: 8px;
+        display: none;
+        background-color: #FAFCFD;
+    }
+    .custom-input.always-show {
+        display: block;
+    }
+
+    /* チェックボックスグループ（複数選択用） */
+    .checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .checkbox-group label {
+        flex: none;
+        width: auto;
+        font-weight: normal;
+        padding: 6px 12px;
+        color: #333;
+        background: #f0f4f8;
+        border: 1px solid #CCD6DD;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .checkbox-group label:hover {
+        background: #e1e8ed;
+    }
+    .checkbox-group input[type="checkbox"] {
+        margin-right: 5px;
+    }
+
+    input[type="number"] {
+        max-width: 150px;
+    }
+    .unit {
+        color: #777;
+        font-size: 15px;
+    }
+
+    details { 
+        margin-top: 30px; 
+        padding: 20px; 
+        background: #FAFCFD; 
+        border: 1px solid var(--border-color);
+        border-radius: 8px; 
+    }
+    summary { 
+        font-weight: bold; 
+        cursor: pointer; 
+        color: var(--primary-color);
+        outline: none;
+    }
+
+    .btn-generate { 
+        display: block; 
+        width: 100%; 
+        padding: 16px; 
+        background: var(--primary-color); 
+        color: #fff; 
+        border: none; 
+        border-radius: 8px; 
+        font-size: 18px; 
+        font-weight: bold;
+        cursor: pointer; 
+        margin-top: 30px; 
+        transition: background 0.3s;
+    }
+    .btn-generate:hover { background: #357ABD; }
+
+    .output-area { 
+        margin-top: 40px; 
+        background: var(--bg-color);
+        padding: 25px;
+        border-radius: 8px;
+    }
+    .output-area label {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--primary-color);
+        font-size: 18px;
+    }
+    #resultPrompt { 
+        width: 100%; 
+        height: 400px; 
+        padding: 15px; 
+        box-sizing: border-box; 
+        border: 1px solid var(--border-color); 
+        border-radius: 6px; 
+        resize: vertical; 
+        font-size: 16px;
+        line-height: 1.5;
+        background-color: #fff;
+    }
+    
+    .btn-copy { 
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 24px; 
+        background: #2ECA7F; 
+        color: #fff; 
+        border: none; 
+        border-radius: 6px; 
+        font-size: 15px; 
+        font-weight: bold;
+        cursor: pointer; 
+        margin-top: 15px; 
+        transition: background 0.3s;
+    }
+    .btn-copy:hover { background: #25A566; }
+
+    @media (max-width: 600px) {
+        .form-group { flex-direction: column; align-items: stretch; }
+        label.section-label { margin-bottom: 8px; padding-top: 0; flex: none; width: 100%; }
+        input[type="number"] { max-width: 100%; }
+        .input-wrapper.row-layout { flex-direction: column; align-items: stretch; }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>人物画像プロンプトメーカー</h2>
+
+    <form id="promptForm">
+        <!-- メイン入力欄 -->
+        <div class="form-group">
+            <label class="section-label">画像サイズ</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="9:16 (縦長)">9:16 (スマホ向け・縦長)</option>
+                    <option value="3:4 (縦長)">3:4 (縦長)</option>
+                    <option value="1:1 (正方形)">1:1 (アイコン向け・正方形)</option>
+                    <option value="16:9 (横長)">16:9 (PC向け・横長)</option>
+                    <option value="4:3 (横長)">4:3 (横長)</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="例: 横1024×縦1536">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">性別</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="女性">女性</option>
+                    <option value="男性">男性</option>
+                    <option value="中性的">中性的</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に性別を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">年齢</label>
+            <div class="input-wrapper">
+                <!-- JavaScriptで5〜80歳まで自動生成 -->
+                <select id="age-select" onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に年齢を入力（例: 20代前半）">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">髪型</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="ストレート">ストレート</option>
+                    <option value="ボブ">ボブ</option>
+                    <option value="ポニーテール">ポニーテール</option>
+                    <option value="ツインテール">ツインテール</option>
+                    <option value="お団子ヘア">お団子ヘア</option>
+                    <option value="巻き髪">巻き髪</option>
+                    <option value="ショートヘア">ショートヘア</option>
+                    <option value="マッシュルーム">マッシュルーム</option>
+                    <option value="センターパート">センターパート</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <div class="checkbox-group" style="margin-top: 8px;">
+                    <label><input type="checkbox" value="前髪あり">前髪あり</label>
+                    <label><input type="checkbox" value="前髪なし">前髪なし</label>
+                </div>
+                <input type="text" class="custom-input" placeholder="自由に髪型を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">髪の長さ</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="ベリーショート">ベリーショート</option>
+                    <option value="ショート">ショート</option>
+                    <option value="ミディアム">ミディアム（肩くらい）</option>
+                    <option value="セミロング">セミロング（胸くらい）</option>
+                    <option value="ロング">ロング</option>
+                    <option value="スーパーロング">スーパーロング</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に長さを入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">髪色</label>
+            <div class="input-wrapper">
+                <div class="row-layout">
+                    <select class="tone-select" style="flex:1;">
+                        <option value="">明るさ指定なし</option>
+                        <option value="明るめの">明るめの</option>
+                        <option value="暗めの">暗めの</option>
+                    </select>
+                    <select class="item-select" style="flex:2;" onchange="toggleCustomInput(this)">
+                        <option value="">色を選択</option>
+                        <option value="黒髪">黒髪</option>
+                        <option value="茶髪（ブラウン）">茶髪（ブラウン）</option>
+                        <option value="金髪（ブロンド）">金髪（ブロンド）</option>
+                        <option value="ミルクティーベージュ">ミルクティーベージュ</option>
+                        <option value="グレージュ">グレージュ</option>
+                        <option value="アッシュグレー">アッシュグレー</option>
+                        <option value="オリーブグレージュ">オリーブグレージュ</option>
+                        <option value="ピンクブラウン">ピンクブラウン</option>
+                        <option value="ブルーブラック">ブルーブラック</option>
+                        <option value="ラベンダーアッシュ">ラベンダーアッシュ</option>
+                        <option value="赤髪">赤髪</option>
+                        <option value="ピンク髪">ピンク髪</option>
+                        <option value="水色髪">水色髪</option>
+                        <option value="銀髪（シルバー）">銀髪（シルバー）</option>
+                        <option value="白髪">白髪</option>
+                        <option value="インナーカラー">インナーカラー（内側だけ染める）</option>
+                        <option value="ハイライト">ハイライト（スジ盛り）</option>
+                        <option value="グラデーションカラー">グラデーションカラー</option>
+                        <option value="custom">自由入力</option>
+                    </select>
+                </div>
+                <input type="text" class="custom-input" placeholder="自由に髪色を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">目線</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="カメラ目線（カメラを向いている）">カメラ目線（カメラを向いている）</option>
+                    <option value="カメラを外している（よそ見をしている）">カメラを外している（よそ見をしている）</option>
+                    <option value="横顔（横を向いている）">横顔（横を向いている）</option>
+                    <option value="伏し目がち（下を見ている）">伏し目がち（下を見ている）</option>
+                    <option value="目を閉じている">目を閉じている</option>
+                    <option value="見上げている">見上げている</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に目線を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">表情</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="笑顔">笑顔</option>
+                    <option value="歯が見えるほどの笑顔">歯が見えるほどの笑顔</option>
+                    <option value="微笑んでいる">微笑んでいる</option>
+                    <option value="照れている">照れている</option>
+                    <option value="真顔・無表情">真顔・無表情</option>
+                    <option value="ウインクしている">ウインクしている</option>
+                    <option value="驚いている">驚いている</option>
+                    <option value="困っている">困っている</option>
+                    <option value="怒っている">怒っている</option>
+                    <option value="悲しんでいる">悲しんでいる</option>
+                    <option value="ドヤ顔・得意げ">ドヤ顔・得意げ</option>
+                    <option value="舌を出している">舌を出している</option>
+                    <option value="口を尖らせている">口を尖らせている</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に表情を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">顔・パーツの特徴</label>
+            <div class="input-wrapper">
+                <div class="checkbox-group">
+                    <label><input type="checkbox" value="一般的">一般的</label>
+                    <label><input type="checkbox" value="整った顔立ち">整った顔立ち</label>
+                    <label><input type="checkbox" value="大きな目">大きな目</label>
+                    <label><input type="checkbox" value="目が小さい">目が小さい</label>
+                    <label><input type="checkbox" value="切れ長の目">切れ長の目</label>
+                    <label><input type="checkbox" value="垂れ目">垂れ目</label>
+                    <label><input type="checkbox" value="目力が有る">目力が有る</label>
+                    <label><input type="checkbox" value="丸顔">丸顔</label>
+                    <label><input type="checkbox" value="シャープな輪郭">シャープな輪郭</label>
+                    <label><input type="checkbox" value="そばかす">そばかす</label>
+                    <label><input type="checkbox" value="泣きぼくろ">泣きぼくろ</label>
+                    <label><input type="checkbox" value="ほくろが多い">ほくろが多い</label>
+                    <label><input type="checkbox" value="ほくろが印象的">ほくろが印象的</label>
+                    <label><input type="checkbox" value="鼻が大きい">鼻が大きい</label>
+                    <label><input type="checkbox" value="鼻が高い">鼻が高い</label>
+                    <label><input type="checkbox" value="鼻筋がキレイ">鼻筋がキレイ</label>
+                    <label><input type="checkbox" value="口が大きい">口が大きい</label>
+                    <label><input type="checkbox" value="口が小さい">口が小さい</label>
+                    <label><input type="checkbox" value="童顔">童顔</label>
+                    <label><input type="checkbox" value="大人っぽい顔">大人っぽい顔</label>
+                </div>
+                <!-- チェックボックスの場合は自由入力欄を常に表示しておく -->
+                <input type="text" class="custom-input always-show" placeholder="その他の特徴を自由に追記（複数可）">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="section-label">身長</label>
+            <div class="input-wrapper">
+                <!-- JavaScriptで100〜200cmまで自動生成 -->
+                <select id="height-select" onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に身長を入力（例: 160cm台）">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">体型の特徴</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="標準体型">標準体型</option>
+                    <option value="スレンダー・痩せ型">スレンダー・痩せ型</option>
+                    <option value="ぽっちゃり">ぽっちゃり</option>
+                    <option value="筋肉質・アスリート">筋肉質・アスリート</option>
+                    <option value="グラマー">グラマー</option>
+                    <option value="華奢">華奢</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に体型を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">頭身</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="1頭身">1頭身</option>
+                    <option value="2頭身">2頭身</option>
+                    <option value="3頭身">3頭身</option>
+                    <option value="4頭身">4頭身</option>
+                    <option value="5頭身">5頭身</option>
+                    <option value="6頭身">6頭身</option>
+                    <option value="7頭身">7頭身</option>
+                    <option value="8頭身">8頭身</option>
+                    <option value="9頭身">9頭身</option>
+                    <option value="10頭身">10頭身</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に頭身を入力（例: 8頭身）">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">職業</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="学生">学生</option>
+                    <option value="会社員・OL">会社員・OL</option>
+                    <option value="秘書">秘書</option>
+                    <option value="CA">CA</option>
+                    <option value="看護師">看護師</option>
+                    <option value="美容部員">美容部員</option>
+                    <option value="エステティシャン">エステティシャン</option>
+                    <option value="アパレル店員">アパレル店員</option>
+                    <option value="カフェ店員">カフェ店員</option>
+                    <option value="キャバ嬢">キャバ嬢</option>
+                    <option value="ガールズバー店員">ガールズバー店員</option>
+                    <option value="グラビアアイドル">グラビアアイドル</option>
+                    <option value="インフルエンサー">インフルエンサー</option>
+                    <option value="警察官">警察官</option>
+                    <option value="教師">教師</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に職業を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">ルックスの雰囲気</label>
+            <div class="input-wrapper">
+                <div class="checkbox-group">
+                    <label><input type="checkbox" value="かわいい・キュート">かわいい・キュート</label>
+                    <label><input type="checkbox" value="美しい・綺麗">美しい・綺麗</label>
+                    <label><input type="checkbox" value="クール・かっこいい">クール・かっこいい</label>
+                    <label><input type="checkbox" value="清楚">清楚</label>
+                    <label><input type="checkbox" value="控えめ">控えめ</label>
+                    <label><input type="checkbox" value="セクシー">セクシー</label>
+                    <label><input type="checkbox" value="ボーイッシュ">ボーイッシュ</label>
+                    <label><input type="checkbox" value="元気・活発">元気・活発</label>
+                    <label><input type="checkbox" value="アイドル">アイドル</label>
+                    <label><input type="checkbox" value="ギャル">ギャル</label>
+                    <label><input type="checkbox" value="田舎のギャル">田舎のギャル</label>
+                    <label><input type="checkbox" value="派手なギャル">派手なギャル</label>
+                    <label><input type="checkbox" value="地雷系">地雷系</label>
+                    <label><input type="checkbox" value="量産型">量産型</label>
+                    <label><input type="checkbox" value="垢抜けない">垢抜けない</label>
+                </div>
+                <input type="text" class="custom-input always-show" placeholder="その他の雰囲気を自由に追記（複数可）">
+            </div>
+        </div>
+
+        <!-- 服装・履物は色を選択可能に -->
+        <div class="form-group">
+            <label class="section-label">上半身の服装</label>
+            <div class="input-wrapper">
+                <div class="row-layout">
+                    <select class="color-select" style="flex:1;">
+                        <option value="">色を選択</option>
+                        <option value="黒">黒</option><option value="白">白</option><option value="グレー">グレー</option>
+                        <option value="赤">赤</option><option value="青">青</option><option value="黄">黄</option>
+                        <option value="緑">緑</option><option value="ピンク">ピンク</option><option value="紫">紫</option>
+                        <option value="オレンジ">オレンジ</option><option value="茶色">茶色</option><option value="ベージュ">ベージュ</option>
+                        <option value="ネイビー">ネイビー</option><option value="水色">水色</option><option value="パステルカラー">パステルカラー</option>
+                    </select>
+                    <select class="item-select" style="flex:2;" onchange="toggleCustomInput(this)">
+                        <option value="">アイテムを選択</option>
+                        <option value="Tシャツ">Tシャツ</option>
+                        <option value="長袖Tシャツ（ロンT）">長袖Tシャツ（ロンT）</option>
+                        <option value="ワイシャツ・ブラウス">ワイシャツ・ブラウス</option>
+                        <option value="セーター・ニット">セーター・ニット</option>
+                        <option value="カーディガン">カーディガン</option>
+                        <option value="パーカー">パーカー</option>
+                        <option value="スウェット・トレーナー">スウェット・トレーナー</option>
+                        <option value="キャミソール">キャミソール</option>
+                        <option value="タンクトップ">タンクトップ</option>
+                        <option value="チューブトップ">チューブトップ</option>
+                        <option value="ビスチェ">ビスチェ</option>
+                        <option value="オフショルダー">オフショルダー</option>
+                        <option value="タートルネック">タートルネック</option>
+                        <option value="ポロシャツ">ポロシャツ</option>
+                        <option value="custom">自由入力</option>
+                    </select>
+                </div>
+                <input type="text" class="custom-input" placeholder="柄や詳細などを自由に追記・入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">下半身の服装</label>
+            <div class="input-wrapper">
+                <div class="row-layout">
+                    <select class="color-select" style="flex:1;">
+                        <option value="">色を選択</option>
+                        <option value="黒">黒</option><option value="白">白</option><option value="グレー">グレー</option>
+                        <option value="赤">赤</option><option value="青">青</option><option value="黄">黄</option>
+                        <option value="緑">緑</option><option value="ピンク">ピンク</option><option value="紫">紫</option>
+                        <option value="茶色">茶色</option><option value="ベージュ">ベージュ</option><option value="ネイビー">ネイビー</option>
+                    </select>
+                    <select class="item-select" style="flex:2;" onchange="toggleCustomInput(this)">
+                        <option value="">アイテムを選択</option>
+                        <option value="ジーンズ・デニム">ジーンズ・デニム</option>
+                        <option value="スラックス">スラックス</option>
+                        <option value="チノパン">チノパン</option>
+                        <option value="スキニーパンツ">スキニーパンツ</option>
+                        <option value="ワイドパンツ">ワイドパンツ</option>
+                        <option value="ショートパンツ">ショートパンツ</option>
+                        <option value="ロングスカート">ロングスカート</option>
+                        <option value="ミニスカート">ミニスカート</option>
+                        <option value="タイトスカート">タイトスカート</option>
+                        <option value="プリーツスカート">プリーツスカート</option>
+                        <option value="フレアスカート">フレアスカート</option>
+                        <option value="レギンス">レギンス</option>
+                        <option value="custom">自由入力</option>
+                    </select>
+                </div>
+                <input type="text" class="custom-input" placeholder="柄や詳細などを自由に追記・入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">履物</label>
+            <div class="input-wrapper">
+                <div class="row-layout">
+                    <select class="color-select" style="flex:1;">
+                        <option value="">色を選択</option>
+                        <option value="黒">黒</option><option value="白">白</option><option value="グレー">グレー</option>
+                        <option value="赤">赤</option><option value="青">青</option><option value="ピンク">ピンク</option>
+                        <option value="茶色">茶色</option><option value="ベージュ">ベージュ</option><option value="ネイビー">ネイビー</option>
+                    </select>
+                    <select class="item-select" style="flex:2;" onchange="toggleCustomInput(this)">
+                        <option value="">アイテムを選択</option>
+                        <option value="スニーカー">スニーカー</option>
+                        <option value="ビジネスシューズ（革靴）">ビジネスシューズ（革靴）</option>
+                        <option value="パンプス">パンプス</option>
+                        <option value="ヒールパンプス">ヒールパンプス</option>
+                        <option value="ハイヒール">ハイヒール</option>
+                        <option value="ブーツ">ブーツ</option>
+                        <option value="ショートブーツ">ショートブーツ</option>
+                        <option value="サンダル">サンダル</option>
+                        <option value="ヒールサンダル">ヒールサンダル</option>
+                        <option value="ローファー">ローファー</option>
+                        <option value="ミュール">ミュール</option>
+                        <option value="スリッポン">スリッポン</option>
+                        <option value="厚底靴">厚底靴</option>
+                        <option value="custom">自由入力</option>
+                    </select>
+                </div>
+                <input type="text" class="custom-input" placeholder="自由に履物を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">どこにいるか</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="カフェ">カフェ</option>
+                    <option value="ラウンジ">ラウンジ</option>
+                    <option value="学校の教室">学校の教室</option>
+                    <option value="オフィス">オフィス</option>
+                    <option value="自分の部屋">自分の部屋</option>
+                    <option value="ホテルの部屋">ホテルの部屋</option>
+                    <option value="高級ホテルの部屋">高級ホテルの部屋</option>
+                    <option value="街中">街中</option>
+                    <option value="公園">公園</option>
+                    <option value="海・ビーチ">海・ビーチ</option>
+                    <option value="森の中">森の中</option>
+                    <option value="駅のホーム">駅のホーム</option>
+                    <option value="夜の街">夜の街</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に場所を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">何をしているか</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="立っている">立っている</option>
+                    <option value="座っている">座っている</option>
+                    <option value="ソファに座っている">ソファに座っている</option>
+                    <option value="ベッドに座っている">ベッドに座っている</option>
+                    <option value="歩いている">歩いている</option>
+                    <option value="走っている">走っている</option>
+                    <option value="スマホを見ている">スマホを見ている</option>
+                    <option value="自撮りしている">自撮りしている</option>
+                    <option value="コーヒーを飲んでいる">コーヒーを飲んでいる</option>
+                    <option value="本を読んでいる">本を読んでいる</option>
+                    <option value="笑顔で手を振っている">笑顔で手を振っている</option>
+                    <option value="振り返っている">振り返っている</option>
+                    <option value="眠っている">眠っている</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由にアクションを入力">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="section-label">季節感</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="春">春</option>
+                    <option value="夏">夏</option>
+                    <option value="秋">秋</option>
+                    <option value="冬">冬</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に季節感を入力">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">時代設定</label>
+            <div class="input-wrapper">
+                <select id="era-select" onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に時代設定を入力（例: 昭和レトロ, 近未来）">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="section-label">質感（写真の仕上がり）</label>
+            <div class="input-wrapper">
+                <select onchange="toggleCustomInput(this)">
+                    <option value="">未選択</option>
+                    <option value="最新のスマートフォンで撮影">最新のスマートフォンで撮影（高画質・クリア）</option>
+                    <option value="古いスマートフォンで撮影">古いスマートフォンで撮影（やや粗め・ローファイ）</option>
+                    <option value="最新の一眼レフカメラで撮影">最新の一眼レフカメラで撮影（プロ仕様・ボケ感）</option>
+                    <option value="古いデジタルカメラで撮影">古いデジタルカメラで撮影（オールドデジカメ風）</option>
+                    <option value="フィルムカメラで撮影">フィルムカメラで撮影（アナログ感・粒子感）</option>
+                    <option value="使い捨てカメラで撮影">使い捨てカメラで撮影（フラッシュ感・ノスタルジック）</option>
+                    <option value="インスタントカメラで撮影">インスタントカメラで撮影（チェキ風・色あせ）</option>
+                    <option value="シネマティック">シネマティック（映画のワンシーンのような色調）</option>
+                    <option value="レトロ・ヴィンテージ調">レトロ・ヴィンテージ調</option>
+                    <option value="custom">自由入力</option>
+                </select>
+                <input type="text" class="custom-input" placeholder="自由に質感を指定（例: ポラロイド風, 8k）">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="section-label">その他指定事項</label>
+            <div class="input-wrapper">
+                <textarea name="others" rows="3" placeholder="例: アニメ調, 高画質, シネマティックライティング"></textarea>
+            </div>
+        </div>
+
+        <!-- 詳細設定 -->
+        <details>
+            <summary>より詳細な設定（タップ/クリックで開閉）</summary>
+            
+            <div class="form-group">
+                <label class="section-label">着ている服のブランド</label>
+                <div class="input-wrapper">
+                    <select onchange="toggleCustomInput(this)">
+                        <option value="">未選択</option>
+                        <option value="MOUSSY">MOUSSY</option>
+                        <option value="SLY">SLY</option>
+                        <option value="EMODA">EMODA</option>
+                        <option value="MURUA">MURUA</option>
+                        <option value="GYDA">GYDA</option>
+                        <option value="RESEXXY">RESEXXY</option>
+                        <option value="rienda">rienda</option>
+                        <option value="LIP SERVICE">LIP SERVICE</option>
+                        <option value="ENVYM">ENVYM</option>
+                        <option value="dazzlin">dazzlin</option>
+                        <option value="LIZ LISA">LIZ LISA</option>
+                        <option value="Ank Rouge">Ank Rouge</option>
+                        <option value="REDYAZEL">REDYAZEL</option>
+                        <option value="titty&Co.">titty&Co.</option>
+                        <option value="EGOIST">EGOIST</option>
+                        <option value="CECIL McBEE">CECIL McBEE</option>
+                        <option value="GRL">GRL</option>
+                        <option value="WEGO">WEGO</option>
+                        <option value="SPINNS">SPINNS</option>
+                        <option value="ZARA">ZARA</option>
+                        <option value="H&M">H&M</option>
+                        <option value="SHEIN">SHEIN</option>
+                        <option value="custom">自由入力</option>
+                    </select>
+                    <input type="text" class="custom-input" placeholder="自由にブランドを入力">
+                </div>
+            </div>
+
+            <div class="form-group"><label class="section-label">手の指のネイル</label><div class="input-wrapper"><input type="text" name="nails_hand" placeholder="例: 赤いネイル, フレンチネイル"></div></div>
+            <div class="form-group"><label class="section-label">足の指のネイル</label><div class="input-wrapper"><input type="text" name="nails_foot" placeholder="例: 黒のペディキュア"></div></div>
+            <div class="form-group"><label class="section-label">肌の色、日焼け具合</label><div class="input-wrapper"><input type="text" name="skin" placeholder="例: 色白, 小麦色"></div></div>
+            <div class="form-group"><label class="section-label">歯並び、歯の特徴</label><div class="input-wrapper"><input type="text" name="teeth" placeholder="例: 八重歯, 白い歯"></div></div>
+            <div class="form-group"><label class="section-label">アクセサリー</label><div class="input-wrapper"><input type="text" name="accessories" placeholder="例: シルバーのネックレス, ピアス"></div></div>
+            <div class="form-group"><label class="section-label">バッグ</label><div class="input-wrapper"><input type="text" name="bag" placeholder="例: トートバッグ, 革のリュック"></div></div>
+        </details>
+
+        <button type="button" class="btn-generate" onclick="generatePrompt()">プロンプトを生成する</button>
+    </form>
+
+    <div class="output-area">
+        <label>生成されたプロンプト</label>
+        <textarea id="resultPrompt" readonly placeholder="ここにプロンプトが出力されます"></textarea>
+        <button type="button" class="btn-copy" onclick="copyToClipboard()">コピー</button>
+    </div>
+</div>
+
+<script>
+    // ページ読み込み時に時代設定(1990-2026)、年齢(5-80)、身長(100-200)を自動生成
+    document.addEventListener("DOMContentLoaded", function() {
+        const eraSelect = document.getElementById('era-select');
+        const eraCustomOption = eraSelect.querySelector('option[value="custom"]');
+        for (let year = 1990; year <= 2026; year++) {
+            const opt = document.createElement('option');
+            opt.value = year + '年';
+            opt.textContent = year + '年';
+            eraSelect.insertBefore(opt, eraCustomOption);
+        }
+
+        const ageSelect = document.getElementById('age-select');
+        const ageCustomOption = ageSelect.querySelector('option[value="custom"]');
+        for (let i = 5; i <= 80; i++) {
+            const opt = document.createElement('option');
+            opt.value = i + '歳';
+            opt.textContent = i + '歳';
+            ageSelect.insertBefore(opt, ageCustomOption);
+        }
+
+        const heightSelect = document.getElementById('height-select');
+        const heightCustomOption = heightSelect.querySelector('option[value="custom"]');
+        for (let i = 100; i <= 200; i++) {
+            const opt = document.createElement('option');
+            opt.value = i + 'cm';
+            opt.textContent = i + 'cm';
+            heightSelect.insertBefore(opt, heightCustomOption);
+        }
+    });
+
+    function toggleCustomInput(selectElem) {
+        // 色＋アイテムなどで構造が違うため、親のinput-wrapperから探す
+        const wrapper = selectElem.closest('.input-wrapper');
+        const customInput = wrapper.querySelector('.custom-input');
+        if(customInput) {
+            if (selectElem.value === 'custom') {
+                customInput.style.display = 'block';
+                customInput.focus(); 
+            } else {
+                customInput.style.display = 'none';
+            }
+        }
+    }
+
+    function generatePrompt() {
+        const formGroups = document.querySelectorAll('.form-group');
+        const prompts = [];
+
+        formGroups.forEach(group => {
+            const label = group.querySelector('.section-label').innerText;
+            let val = '';
+
+            const checkboxes = group.querySelectorAll('input[type="checkbox"]:checked');
+            const colorSelect = group.querySelector('.color-select');
+            const toneSelect = group.querySelector('.tone-select'); // 髪色用トーン
+            const itemSelect = group.querySelector('.item-select');
+            // 色選択・トーン選択・アイテム選択以外の通常のselectを探す
+            const standardSelect = group.querySelector('select:not(.color-select):not(.tone-select):not(.item-select)');
+            const customInput = group.querySelector('.custom-input');
+            const textarea = group.querySelector('textarea');
+            const simpleTextInput = group.querySelector('input[type="text"]:not(.custom-input)');
+
+            // パターン1: チェックボックスメイン（顔・パーツの特徴、雰囲気など。セレクトボックスを持たない）
+            if (group.querySelector('.checkbox-group') && !standardSelect) {
+                let valArray = [];
+                checkboxes.forEach(cb => valArray.push(cb.value));
+                if (customInput && customInput.value.trim()) {
+                    valArray.push(customInput.value.trim());
+                }
+                val = valArray.join('、');
+            } 
+            // パターン2: 色＋アイテム（服装・履物）
+            else if (colorSelect && itemSelect) {
+                let itemVal = '';
+                if (itemSelect.value === 'custom') {
+                    itemVal = customInput ? customInput.value.trim() : '';
+                } else if (itemSelect.value !== '') {
+                    itemVal = itemSelect.value.split('（')[0];
+                }
+                
+                if (itemVal) {
+                    val = (colorSelect.value ? colorSelect.value + 'の' : '') + itemVal;
+                }
+            }
+            // パターン3: トーン＋アイテム（髪色）
+            else if (toneSelect && itemSelect) {
+                let itemVal = '';
+                if (itemSelect.value === 'custom') {
+                    itemVal = customInput ? customInput.value.trim() : '';
+                } else if (itemSelect.value !== '') {
+                    itemVal = itemSelect.value.split('（')[0];
+                }
+                
+                if (itemVal) {
+                    val = (toneSelect.value ? toneSelect.value : '') + itemVal;
+                }
+            }
+            // パターン4: 通常のプルダウン（前髪チェックボックスが同居するケースも対応）
+            else if (standardSelect) {
+                let valArray = [];
+                if (standardSelect.value === 'custom') {
+                    if (customInput && customInput.value.trim()) {
+                        valArray.push(customInput.value.trim());
+                    }
+                } else if (standardSelect.value !== '') {
+                    valArray.push(standardSelect.value.split('（')[0]);
+                }
+                
+                // 髪型などの同グループにチェックボックス（前髪あり/なし等）があれば追加
+                checkboxes.forEach(cb => {
+                    valArray.push(cb.value);
+                });
+                
+                val = valArray.join('、');
+            } 
+            // パターン5: テキストエリア（その他指定事項）
+            else if (textarea) {
+                val = textarea.value.trim();
+            }
+            // パターン6: 単純なテキストボックス（ネイルや肌の色など）
+            else if (simpleTextInput) {
+                val = simpleTextInput.value.trim();
+            }
+
+            if (val) {
+                prompts.push(`${label}：${val}`);
+            }
+        });
+
+        let finalOutput = "";
+        if (prompts.length > 0) {
+            // 出力文言の変更
+            finalOutput = "以下の設定で日本人の画像を作成。\n\n" + prompts.join('\n');
+        }
+        
+        document.getElementById('resultPrompt').value = finalOutput;
+    }
+
+    function copyToClipboard() {
+        const textarea = document.getElementById('resultPrompt');
+        if (!textarea.value) {
+            alert('コピーするプロンプトがありません。');
+            return;
+        }
+        
+        textarea.select();
+        document.execCommand('copy');
+        
+        const copyBtn = document.querySelector('.btn-copy');
+        const originalText = copyBtn.innerText;
+        copyBtn.innerText = 'コピー完了！';
+        copyBtn.style.background = '#218838';
+        
+        setTimeout(() => {
+            copyBtn.innerText = originalText;
+            copyBtn.style.background = '#2ECA7F';
+        }, 2000);
+    }
+</script>
+
+</body>
+</html>
